@@ -1,0 +1,9 @@
+# Dependency directories
+node_modules
+
+# env files
+.env
+
+# Images
+*.jpg
+*.png

@@ -1,0 +1,16 @@
+{
+  "name": "succulentpicturebot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [],
+  "author": "Jeff Gieske (http://palmtopturtle.github.io)",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^6.1.0",
+    "twit": "^2.2.11"
+  }
+}
