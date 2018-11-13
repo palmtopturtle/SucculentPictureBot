@@ -100,6 +100,7 @@ function createTweet(params, meta_params) {
     } else {
       T.post("statuses/update", params, (err, data, res) => {
         console.log("Successfully created tweet! Process completed.");
+        console.log(`Number of items in post history: ${postHistory.size}`)
         console.log("Awaiting next call...\n-----");
       });
     }
