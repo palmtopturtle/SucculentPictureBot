@@ -1,6 +1,6 @@
 # SucculentPictureBot
 A Twitter bot that fetches data from /r/succulents.
-Hosted via Glitch: 
+Hosted via Glitch: https://glitch.com/edit/#!/succulentpicturebot
 
 ## Todo
 * Refactor callbacks to use Promises
