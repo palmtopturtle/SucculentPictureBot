@@ -43,7 +43,7 @@ function getRandomPost(posts) {
     tag: posts[num].link_flair_text
   };
 
-  client.exists(newPost.id, res => {
+  client.exists(newPost.id, (err, res) => {
     console.log(`Result of ID comparison: ${res}, checking other parameters...`)
     if (
       newPost.url &&
@@ -112,7 +112,7 @@ function createTweet(params, meta_params) {
       T.post("statuses/update", params, (err, data, res) => {
         console.log("Successfully created tweet! Process completed.");
         console.log("Awaiting next call...");
-        client.dbsize(res => console.log(`Number of post IDs in database: ${res}`));
+        client.dbsize((err, res) => console.log(`Number of post IDs in database: ${res}`));
       });
     }
   });
