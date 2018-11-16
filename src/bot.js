@@ -2,17 +2,21 @@ const Twit = require("twit"),
   config = require("./config"),
   fs = require("fs"),
   request = require("request"),
-  path = require("path");
+  path = require("path"),
+  redis = require("redis");
 
 const REDDIT_API_URL =
     "https://www.reddit.com/r/succulents/.json?limit=25&sort=hot&raw_json=1",
   INTERVAL = 1000 * 60 * 60 * 3; //last num = hours
 
-const T = new Twit(config);
+const T = new Twit(config),
+  client = redis.createClient();
 
-const postHistory = new Set([]);
 let activePost = null,
   max = 0;
+
+client.on("connect", () => console.log("Connected to Redis!"));
+client.on("error", err => console.log(`Error connecting to Redis...\n${err}`));
 
 function beginProcess() {
   request.get(REDDIT_API_URL, (err, res, body) => {
@@ -24,9 +28,6 @@ function beginProcess() {
       max = json.data.dist;
       let posts = json.data.children.map(post => post.data);
       getRandomPost(posts);
-      activePost
-        ? saveImage()
-        : console.log("There somehow isn't an active post! Aborting...");
     }
   });
 }
@@ -38,17 +39,27 @@ function getRandomPost(posts) {
     url: posts[num].preview ? posts[num].preview.images[0].source.url : false,
     permalink: "https://www.reddit.com" + posts[num].permalink,
     title: posts[num].title,
-    author: posts[num].author
+    author: posts[num].author,
+    tag: posts[num].link_flair_text
   };
 
-  if (newPost.url && !postHistory.has(newPost.id)) {
-    console.log("Post found!");
-    activePost = newPost;
-    postHistory.add(newPost.id);
-  } else {
-    console.log("Post invalid, trying again...");
-    getRandomPost(posts);
-  }
+  client.exists(newPost.id, res => {
+    console.log(`Result of ID comparison: ${res}, checking other parameters...`)
+    if (
+      newPost.url &&
+      !res &&
+      !newPost.title.toLowerCase().includes("help") &&
+      newPost.tag !== "Help"
+    ) {
+      console.log("Post found!");
+      activePost = newPost;
+      client.set(activePost.id, activePost.id, "EX", 172800); //48 hours
+      saveImage();
+    } else {
+      console.log("Post invalid, trying again...");
+      getRandomPost(posts);
+    }
+  });
 }
 
 function saveImage() {
@@ -100,8 +111,9 @@ function createTweet(params, meta_params) {
     } else {
       T.post("statuses/update", params, (err, data, res) => {
         console.log("Successfully created tweet! Process completed.");
-        console.log(`Number of items in post history: ${postHistory.size}`)
-        console.log("Awaiting next call...\n-----");
+        console.log("Awaiting next call...");
+        console.log("Number of items in post history:");
+        client.dbsize(res => console.log(`Number of post IDs in database: ${res}`));
       });
     }
   });
