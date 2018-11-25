@@ -7,15 +7,47 @@ const Twit = require("twit"),
 
 const REDDIT_API_URL =
     "https://www.reddit.com/r/succulents/.json?limit=25&sort=hot&raw_json=1",
-  INTERVAL = 1000 * 60 * 60 * 3; //last num = hours
+  INTERVAL = 1000 * 60 * 60 * 6, //last num = hours
+  MINIMUM_INTERVAL = 1000 * 60 * 15; //last num = minutes
 
 const T = new Twit(config),
   client = redis.createClient();
 
-let max = 0;
+let max = 0,
+  botProfileParams = {
+    user_id: 1061368238360141824,
+    count: 1
+  };
 
 client.on("connect", () => console.log("Connected to Redis!"));
 client.on("error", err => console.log(`Error connecting to Redis...\n${err}`));
+
+/**
+ * Due to how Glitch hosting works, this checks to make sure that the most recent tweet wasn't created within the minimum time interval.
+ * Without this check, two tweets may sometimes be posted within minutes of each other.
+ */
+function checkRecentTweet() {
+  return new Promise((resolve, reject) => {
+    console.log("Checking most recent tweet...");
+    T.get("statuses/user_timeline", botProfileParams, (err, data, res) => {
+      if (err) {
+        reject(err);
+      } else {
+        let tweetDate = new Date(Date.parse(data[0].created_at)),
+          currentDate = new Date();
+
+        let difference = (tweetDate - currentDate) / 1000;
+        if (difference <= MINIMUM_INTERVAL) {
+          console.log("Passed minimum interval check! Starting process.");
+          resolve();
+        } else {
+          console.log("Tweet detected within minimum interval. Aborting...");
+          reject();
+        }
+      }
+    });
+  });
+}
 
 /**
  * Makes a call to the Reddit API and returns an array of posts.
@@ -103,7 +135,7 @@ function downloadImage(post) {
           reject(err);
         } else {
           console.log("Download complete!");
-          resolve({ post: post, image: filePath });
+          resolve({ post: post, image: fileName });
         }
       });
   });
@@ -194,7 +226,8 @@ function getRandomPost(posts) {
  * Promise chain that goes through the whole process, from calling the Reddit API to actually posting the tweet.
  */
 function beginProcess() {
-  getRedditPosts()
+  checkRecentTweet()
+    .then(() => getRedditPosts())
     .then(posts => validatePost(posts))
     .then(post => downloadImage(post))
     .then(data => uploadImage(data))
