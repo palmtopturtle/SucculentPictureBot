@@ -36,7 +36,7 @@ function checkRecentTweet() {
         let tweetDate = new Date(Date.parse(data[0].created_at)),
           currentDate = new Date();
 
-        let difference = (tweetDate - currentDate) / 1000;
+        let difference = currentDate - tweetDate;
         if (difference <= MINIMUM_INTERVAL) {
           console.log("Passed minimum interval check! Starting process.");
           resolve();
